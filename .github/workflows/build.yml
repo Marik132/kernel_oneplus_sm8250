@@ -1,0 +1,28 @@
+name: Build-Kebab-A13
+on:
+  push:
+    branches: [ A13 ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: A13
+      - name: Build
+        run: |
+          sudo apt update && sudo apt install -y bc bison build-essential flex git libssl-dev libelf-dev clang lld llvm
+          mkdir tc && cd tc
+          wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/clang-r416183b.tar.gz
+          tar -xf clang-r416183b.tar.gz
+          cd ..
+          export PATH=$(pwd)/tc/bin:$PATH
+          make O=out ARCH=arm64 vendor/kebab_defconfig
+          make -j$(nproc) O=out ARCH=arm64 CC=clang CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-gnu-
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: Kernel-Image
+          path: out/arch/arm64/boot/Image.gz-dtb
