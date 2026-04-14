@@ -19,6 +19,12 @@ jobs:
           sudo apt update
           sudo apt install -y bc bison build-essential flex git libssl-dev libelf-dev clang lld llvm libncurses-dev gcc-aarch64-linux-gnu
 
+      - name: Fix Broken Configs
+        run: |
+          # Видаляємо зламаний драйвер з конфігурації, щоб він не зупиняв білд
+          sed -i '/rt18192eu/d' drivers/staging/Kconfig
+          sed -i '/rt18192eu/d' drivers/staging/Makefile
+
       - name: Build Kernel
         run: |
           export ARCH=arm64
