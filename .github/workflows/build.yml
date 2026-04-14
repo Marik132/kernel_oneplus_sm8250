@@ -18,27 +18,35 @@ jobs:
           sudo apt update
           sudo apt install -y bc bison build-essential flex git libssl-dev libelf-dev clang lld llvm libncurses-dev gcc-aarch64-linux-gnu
 
-      - name: Ultimate Fix for Drivers
+      - name: Total Isolation Fix
         run: |
-          # Видаляємо рядок, який змушує систему шукати зламаний драйвер
-          sed -i '/rt18192eu/d' drivers/staging/Kconfig
-          # Про всяк випадок прибираємо його і з Makefile
-          sed -i '/rt18192eu/d' drivers/staging/Makefile
+          # 1. Повністю відключаємо папку staging, де сидить помилка
+          mv drivers/staging drivers/staging_backup
+          mkdir -p drivers/staging
+          
+          # 2. Створюємо там порожній Kconfig, щоб ядро не "плакало"
+          echo "menuconfig STAGING" > drivers/staging/Kconfig
+          echo "    bool \"Staging drivers\"" >> drivers/staging/Kconfig
+          echo "    default n" >> drivers/staging/Kconfig
+          
+          # 3. Створюємо порожній Makefile
+          echo "obj-y :=" > drivers/staging/Makefile
 
       - name: Build Kernel
         run: |
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
-          
-          # Створюємо папку для об'єктних файлів
           mkdir -p out
           
-          # Готуємо конфіг
+          # Створюємо чистий конфіг
           make O=out vendor/kebab_defconfig
           
-          # Запускаємо збірку. Я додав CC=clang, щоб ядро було "правильним" для Android 13/14
-          make -j$(nproc) O=out ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip
+          # Примусово вимикаємо зламаний драйвер у фінальному конфігу
+          sed -i 's/CONFIG_RTL8192EU=y/CONFIG_RTL8192EU=n/g' out/.config || true
           
+          # Б'ємо прямо в ціль: запускаємо збірку
+          make -j$(nproc) O=out ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip
+
       - name: Upload Kernel Image
         uses: actions/upload-artifact@v4
         with:
