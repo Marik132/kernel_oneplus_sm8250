@@ -18,34 +18,27 @@ jobs:
           sudo apt update
           sudo apt install -y bc bison build-essential flex git libssl-dev libelf-dev clang lld llvm libncurses-dev gcc-aarch64-linux-gnu
 
-      - name: Force Fix Driver Error
+      - name: Ultimate Fix for Drivers
         run: |
-          # Створюємо папку, якої не вистачає
-          mkdir -p drivers/staging/rt18192eu
-          
-          # Створюємо фейковий Kconfig, щоб make не "панікував"
-          echo "config RTL8192EU" > drivers/staging/rt18192eu/Kconfig
-          echo "    tristate \"Realtek 8192EU USB WiFi\"" >> drivers/staging/rt18192eu/Kconfig
-          echo "    depends on USB && WLAN" >> drivers/staging/rt18192eu/Kconfig
-          echo "    default n" >> drivers/staging/rt18192eu/Kconfig
-          
-          # Створюємо порожній Makefile
-          touch drivers/staging/rt18192eu/Makefile
-          
-          # Вимикаємо цей драйвер у нашому дефконфігу про всяк випадок
-          sed -i 's/CONFIG_RTL8192EU=y/CONFIG_RTL8192EU=n/g' arch/arm64/configs/vendor/kebab_defconfig || true
+          # Видаляємо рядок, який змушує систему шукати зламаний драйвер
+          sed -i '/rt18192eu/d' drivers/staging/Kconfig
+          # Про всяк випадок прибираємо його і з Makefile
+          sed -i '/rt18192eu/d' drivers/staging/Makefile
 
       - name: Build Kernel
         run: |
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
           
-          # Готуємо конфігурацію
+          # Створюємо папку для об'єктних файлів
+          mkdir -p out
+          
+          # Готуємо конфіг
           make O=out vendor/kebab_defconfig
           
-          # Запускаємо компіляцію ядра
+          # Запускаємо збірку. Я додав CC=clang, щоб ядро було "правильним" для Android 13/14
           make -j$(nproc) O=out ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip
-
+          
       - name: Upload Kernel Image
         uses: actions/upload-artifact@v4
         with:
