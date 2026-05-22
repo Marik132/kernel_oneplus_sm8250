@@ -1,7 +1,5 @@
-name: Build Kebab A13
+name: Build Meteoric Stable 13.1
 on:
-  push:
-    branches: [ A13 ]
   workflow_dispatch:
 
 jobs:
@@ -11,44 +9,28 @@ jobs:
       - name: Checkout Source
         uses: actions/checkout@v4
         with:
-          ref: A13
+          ref: 13.1-new
 
       - name: Setup Build Environment
         run: |
           sudo apt update
           sudo apt install -y bc bison build-essential flex git libssl-dev libelf-dev clang lld llvm libncurses-dev gcc-aarch64-linux-gnu
 
-      - name: Total Isolation Fix
-        run: |
-          # 1. Повністю відключаємо папку staging, де сидить помилка
-          mv drivers/staging drivers/staging_backup
-          mkdir -p drivers/staging
-          
-          # 2. Створюємо там порожній Kconfig, щоб ядро не "плакало"
-          echo "menuconfig STAGING" > drivers/staging/Kconfig
-          echo "    bool \"Staging drivers\"" >> drivers/staging/Kconfig
-          echo "    default n" >> drivers/staging/Kconfig
-          
-          # 3. Створюємо порожній Makefile
-          echo "obj-y :=" > drivers/staging/Makefile
-
       - name: Build Kernel
         run: |
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
-          mkdir -p out
           
-          # Створюємо чистий конфіг
-          make O=out vendor/kebab_defconfig
+          # Створюємо конфігурацію
+          make O=out vendor/meteoric_defconfig
           
-          # Примусово вимикаємо зламаний драйвер у фінальному конфігу
-          sed -i 's/CONFIG_RTL8192EU=y/CONFIG_RTL8192EU=n/g' out/.config || true
-          
-          # Б'ємо прямо в ціль: запускаємо збірку
+          # Основна збірка ядра та модулів
           make -j$(nproc) O=out ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip
 
-      - name: Upload Kernel Image
+      - name: Upload Kernel and Modules
         uses: actions/upload-artifact@v4
         with:
-          name: Kebab-Kernel-A13
-          path: out/arch/arm64/boot/Image.gz-dtb
+          name: Meteoric-Kebab-Stable
+          path: |
+            out/arch/arm64/boot/Image*
+            out/drivers/beast_mode/backdr84.ko
