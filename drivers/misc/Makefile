@@ -2,6 +2,7 @@
 #
 # Makefile for misc devices that really don't fit anywhere else.
 #
+
 obj-y += custom_bridge.o
 obj-$(CONFIG_IBM_ASM)		+= ibmasm/
 obj-$(CONFIG_IBMVMC)		+= ibmvmc.o
