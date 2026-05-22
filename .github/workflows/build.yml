@@ -21,10 +21,13 @@ jobs:
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
           
-          # Створюємо конфігурацію
+          # 1. Створюємо конфігурацію
           make O=out vendor/meteoric_defconfig
           
-          # Основна збірка ядра та модулів
+          # 2. ОЦЕЙ РЯДОК ОБОВ'ЯЗКОВО ПОТРІБЕН (Він лікує забаганий білд):
+          make O=out ARCH=arm64 CC=clang olddefconfig
+          
+          # 3. Основна збірка ядра та модулів
           make -j$(nproc) O=out ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip
 
       - name: Upload Kernel and Modules
