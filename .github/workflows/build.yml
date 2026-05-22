@@ -21,13 +21,17 @@ jobs:
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
           
-          # 1. Створюємо конфігурацію
+          # 1. Створюємо базовий конфіг
           make O=out vendor/meteoric_defconfig
           
-          # 2. ОЦЕЙ РЯДОК ОБОВ'ЯЗКОВО ПОТРІБЕН (Він лікує забаганий білд):
+          # 2. Виправляємо нові опції конфігурації автоматично
           make O=out ARCH=arm64 CC=clang olddefconfig
           
-          # 3. Основна збірка ядра та модулів
+          # 3. НАШ ФАСТ-ТРЕК: Компілюємо суто папку з нашим містком!
+          # Перевірка займе близько хвилини.
+          make O=out ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip drivers/misc/
+          
+          # 4. Якщо все чисто — запускаємо повну збірку всього ядра
           make -j$(nproc) O=out ARCH=arm64 CC=clang CROSS_COMPILE=aarch64-linux-gnu- NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip
 
       - name: Upload Kernel and Modules
